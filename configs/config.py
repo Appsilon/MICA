@@ -112,7 +112,7 @@ def update_cfg(cfg, cfg_file):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, help='cfg file path', required=True)
+    parser.add_argument('--cfg', type=str, help='cfg file path', default="MICA/configs/mica.yml") # required=True
     parser.add_argument('--test_dataset', type=str, help='Test dataset type', default='')
     parser.add_argument('--checkpoint', type=str, help='Checkpoint to load', default='')
 
