@@ -32,7 +32,7 @@ from configs.config import cfg
 from utils import util
 
 sys.path.append("./micalib")
-from validator import Validator
+from micalib.validator import Validator
 
 
 def print_info(rank):

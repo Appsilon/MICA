@@ -140,11 +140,14 @@ def main(cfg, args):
 
 
 if __name__ == '__main__':
+
+    root = Path(__file__).parent
+
     parser = argparse.ArgumentParser(description='MICA - Towards Metrical Reconstruction of Human Faces')
-    parser.add_argument('-i', default='demo/input', type=str, help='Input folder with images')
-    parser.add_argument('-o', default='demo/output', type=str, help='Output folder')
-    parser.add_argument('-a', default='demo/arcface', type=str, help='Processed images for MICA input')
-    parser.add_argument('-m', default='data/pretrained/mica.tar', type=str, help='Pretrained model path')
+    parser.add_argument('-i', default=str(root / 'demo/input'), type=str, help='Input folder with images')
+    parser.add_argument('-o', default=str(root / 'demo/output'), type=str, help='Output folder')
+    parser.add_argument('-a', default=str(root / 'demo/arcface'), type=str, help='Processed images for MICA input')
+    parser.add_argument('-m', default=str(root / 'data/pretrained/mica.tar'), type=str, help='Pretrained model path')
 
     args = parser.parse_args()
     cfg = get_cfg_defaults()

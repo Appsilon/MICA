@@ -40,6 +40,7 @@ if __name__ == '__main__':
     torch.cuda.empty_cache()
     num_gpus = torch.cuda.device_count()
 
-    mp.spawn(train, args=(num_gpus, cfg), nprocs=num_gpus, join=True)
+    train(rank=0, world_size=1, cfg=cfg)
+    # mp.spawn(train, args=(num_gpus, cfg), nprocs=num_gpus, join=True)
 
     exit(0)

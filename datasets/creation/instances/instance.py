@@ -24,7 +24,7 @@ from pytorch3d.transforms import RotateAxisAngle
 
 class Instance:
     def __init__(self):
-        self.mount = '/home/wzielonka/Cluster/lustre'
+        self.mount = '/home/andrew'
         self.dst = 'empty'
         self.src = 'empty'
         self.device = 'cuda:0'
