@@ -45,6 +45,7 @@ cfg.model.hidden_layers_size = 256
 cfg.model.mapping_layers = 3
 cfg.model.use_pretrained = True
 cfg.model.arcface_pretrained_model = '/scratch/is-rg-ncs/models_weights/arcface-torch/backbone100.pth'
+cfg.model.arcface_unfreeze = 2
 
 # ---------------------------------------------------------------------------- #
 # Options for Dataset
@@ -60,6 +61,7 @@ cfg.dataset.root = '/datasets/MICA/'
 
 # ---------------------------------------------------------------------------- #
 # Mask weights
+# Note that only face, ears and eyes appear to be used (otherwise 1)
 # ---------------------------------------------------------------------------- #
 cfg.mask_weights = CN()
 cfg.mask_weights.face = 150.0

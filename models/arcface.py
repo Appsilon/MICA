@@ -163,12 +163,17 @@ class IResNet(nn.Module):
 
 
 class Arcface(IResNet):
-    def __init__(self, pretrained_path=None, **kwargs):
+    def __init__(self, pretrained_path=None, unfreeze: int = 2, **kwargs):
         super(Arcface, self).__init__(IBasicBlock, [3, 13, 30, 3], **kwargs)
         if pretrained_path is not None and os.path.exists(pretrained_path):
             logger.info(f'[Arcface] Initializing from insightface model from {pretrained_path}.')
             self.load_state_dict(torch.load(pretrained_path))
-        self.freezer([self.layer1, self.layer2, self.layer3, self.conv1, self.bn1, self.prelu])
+
+        # self.freezer([self.layer1, self.layer2, self.layer3, self.conv1, self.bn1, self.prelu])
+        self.layers = [self.conv1, self.bn1, self.prelu, self.layer1, self.layer2, self.layer3, self.layer4, self.bn2]
+        self.unfreeze = unfreeze
+        
+        self.freezer(self.layers[:-unfreeze])
 
     def freezer(self, layers):
         for layer in layers:
@@ -182,16 +187,24 @@ class Arcface(IResNet):
     def forward_arcface(self, x):
         with torch.cuda.amp.autocast(self.fp16):
             ### FROZEN ###
-            with torch.no_grad():
-                x = self.conv1(x)
-                x = self.bn1(x)
-                x = self.prelu(x)
-                x = self.layer1(x)
-                x = self.layer2(x)
-                x = self.layer3(x)
+            # with torch.no_grad():
+            #     x = self.conv1(x)
+            #     x = self.bn1(x)
+            #     x = self.prelu(x)
+            #     x = self.layer1(x)
+            #     x = self.layer2(x)
+            #     x = self.layer3(x)
 
-            x = self.layer4(x)
-            x = self.bn2(x)
+            # x = self.layer4(x)
+            # x = self.bn2(x)
+
+            for l in self.layers[:-self.unfreeze]:
+                with torch.no_grad():
+                    x = l(x)
+
+            for l in self.layers[-self.unfreeze:]:
+                x = l(x)
+
             x = torch.flatten(x, 1)
             x = self.dropout(x)
         x = self.fc(x.float() if self.fp16 else x)
