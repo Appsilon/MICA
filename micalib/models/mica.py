@@ -37,12 +37,18 @@ class MICA(BaseModel):
         self.initialize()
 
     def create_model(self, model_cfg):
-        mapping_layers = model_cfg.mapping_layers
+
         pretrained_path = None
         if not model_cfg.use_pretrained:
             pretrained_path = model_cfg.arcface_pretrained_model
-        self.arcface = Arcface(pretrained_path=pretrained_path).to(self.device)
-        self.flameModel = Generator(512, 300, self.cfg.model.n_shape, mapping_layers, model_cfg, self.device)
+        self.arcface = Arcface(pretrained_path=pretrained_path, unfreeze=model_cfg.arcface_unfreeze).to(self.device)
+        self.flameModel = Generator(
+            512, 
+            model_cfg.hidden_layers_size, 
+            model_cfg.n_shape, 
+            model_cfg.mapping_layers, 
+            model_cfg, 
+            self.device)
 
     def load_model(self):
         model_path = os.path.join(self.cfg.output_dir, 'model.tar')
