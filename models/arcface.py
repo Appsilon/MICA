@@ -165,9 +165,14 @@ class IResNet(nn.Module):
 class Arcface(IResNet):
     def __init__(self, pretrained_path=None, unfreeze: int = 2, **kwargs):
         super(Arcface, self).__init__(IBasicBlock, [3, 13, 30, 3], **kwargs)
-        if pretrained_path is not None and os.path.exists(pretrained_path):
-            logger.info(f'[Arcface] Initializing from insightface model from {pretrained_path}.')
-            self.load_state_dict(torch.load(pretrained_path))
+        
+        if pretrained_path is not None:
+            
+            if os.path.exists(pretrained_path):
+                logger.info(f'[Arcface] Initializing from insightface model from {pretrained_path}.')
+                self.load_state_dict(torch.load(pretrained_path))
+            else:
+                raise FileNotFoundError(pretrained_path)
 
         # self.freezer([self.layer1, self.layer2, self.layer3, self.conv1, self.bn1, self.prelu])
         self.layers = [self.conv1, self.bn1, self.prelu, self.layer1, self.layer2, self.layer3, self.layer4, self.bn2]
