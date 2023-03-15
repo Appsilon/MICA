@@ -33,7 +33,7 @@ from loguru import logger
 from skimage.io import imread
 from tqdm import tqdm
 
-from configs.config import get_cfg_defaults
+from configs.config import get_cfg_defaults, update_cfg
 from datasets.creation.util import get_arcface_input, get_center
 from utils import util
 
@@ -141,16 +141,32 @@ def main(cfg, args):
 
 if __name__ == '__main__':
 
-    root = Path(__file__).parent
+    cfg = get_cfg_defaults()
+    root = Path(cfg.mica_dir)
 
     parser = argparse.ArgumentParser(description='MICA - Towards Metrical Reconstruction of Human Faces')
     parser.add_argument('-i', default=str(root / 'demo/input'), type=str, help='Input folder with images')
     parser.add_argument('-o', default=str(root / 'demo/output'), type=str, help='Output folder')
     parser.add_argument('-a', default=str(root / 'demo/arcface'), type=str, help='Processed images for MICA input')
-    parser.add_argument('-m', default=str(root / 'data/pretrained/mica.tar'), type=str, help='Pretrained model path')
+
+    # Original
+    # parser.add_argument('-m', default=str(root / 'data/pretrained/mica.tar'), type=str, help='Pretrained model path')
+    # parser.add_argument('-c', type=str, help='cfg file path', default=str(root / "configs/mica.yml"))
+    
+    # Custom
+    # parser.add_argument('-m', default=str(root / '../output/custom/model.tar'), type=str, help='Pretrained model path')
+    # parser.add_argument('-c', type=str, help='cfg file path', default=str(root / "configs/custom.yml"))
+    
+    # Scratch
+    parser.add_argument('-m', default=str(root / '../output/scratch/model.tar'), type=str, help='Pretrained model path')
+    parser.add_argument('-c', type=str, help='cfg file path', default=str(root / "configs/scratch.yml"))
 
     args = parser.parse_args()
-    cfg = get_cfg_defaults()
+
+    if args.c is not None:
+        cfg_file = args.c
+        cfg = update_cfg(cfg, args.c)
+        cfg.cfg_file = cfg_file
 
     deterministic(42)
     main(cfg, args)

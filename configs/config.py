@@ -16,17 +16,15 @@
 
 
 import argparse
-import os
-
+from pathlib import Path
 from yacs.config import CfgNode as CN
 
 cfg = CN()
 
-abs_mica_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-cfg.mica_dir = abs_mica_dir
+cfg.mica_dir = str(Path(__file__).parent.parent)
 cfg.device = 'cuda'
 cfg.device_id = '0'
-cfg.pretrained_model_path = os.path.join(cfg.mica_dir, 'data/pretrained', 'mica.tar')
+cfg.pretrained_model_path = str(Path(cfg.mica_dir) / 'data/pretrained/mica.tar')
 cfg.output_dir = ''
 
 # ---------------------------------------------------------------------------- #
@@ -36,9 +34,10 @@ cfg.model = CN()
 cfg.model.testing = False
 cfg.model.name = 'mica'
 
-cfg.model.topology_path = os.path.join(cfg.mica_dir, 'data/FLAME2020', 'head_template.obj')
-cfg.model.flame_model_path = os.path.join(cfg.mica_dir, 'data/FLAME2020', 'generic_model.pkl')
-cfg.model.flame_lmk_embedding_path = os.path.join(cfg.mica_dir, 'data/FLAME2020', 'landmark_embedding.npy')
+cfg.model.topology_path = str(Path(cfg.mica_dir) / 'data/FLAME2020/head_template.obj')
+cfg.model.flame_model_path = str(Path(cfg.mica_dir) / 'data/FLAME2020/generic_model.pkl')
+cfg.model.flame_lmk_embedding_path = str(Path(cfg.mica_dir) / 'data/FLAME2020/landmark_embedding.npy')
+cfg.model.flame_mask_path = str(Path(cfg.mica_dir) / 'data/FLAME2020/FLAME_masks/FLAME_masks.pkl')
 cfg.model.n_shape = 300
 cfg.model.layers = 8
 cfg.model.hidden_layers_size = 256
@@ -113,15 +112,19 @@ def update_cfg(cfg, cfg_file):
 
 
 def parse_args():
+
+    cfg = get_cfg_defaults()
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, help='cfg file path', default="MICA/configs/mica.yml") # required=True
+    # parser.add_argument('--cfg', type=str, help='cfg file path', default=str(Path(cfg.mica_dir) / "configs/mica.yml")) # required=True
+    # parser.add_argument('--cfg', type=str, help='cfg file path', default=str(Path(cfg.mica_dir) / "configs/custom.yml"))
+    parser.add_argument('--cfg', type=str, help='cfg file path', default=str(Path(cfg.mica_dir) / "configs/scratch.yml"))
     parser.add_argument('--test_dataset', type=str, help='Test dataset type', default='')
     parser.add_argument('--checkpoint', type=str, help='Checkpoint to load', default='')
 
     args = parser.parse_args()
     print(args, end='\n\n')
 
-    cfg = get_cfg_defaults()
     if args.cfg is not None:
         cfg_file = args.cfg
         cfg = update_cfg(cfg, args.cfg)
