@@ -74,7 +74,7 @@ class BaseDataset(Dataset, ABC):
         self.transforms = transforms.Compose([t for t in args])
 
     def get_arcface_path(self, image_path):
-        return re.sub('png|jpg', 'npy', str(image_path))
+        return re.sub('png|jpg|PNG|JPG', 'npy', str(image_path))
 
     def __len__(self):
         return len(self.imagepaths)
