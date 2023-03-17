@@ -165,6 +165,7 @@ class Trainer(object):
             {
                 'images': images,
                 'flame_verts_shape': decoder_output['flame_verts_shape'],
+                'pred_shape_code': decoder_output['pred_shape_code'],
                 'pred_canonical_shape_vertices': decoder_output['pred_canonical_shape_vertices'],
             }
 
@@ -227,7 +228,9 @@ class Trainer(object):
                                 f"  Step: {self.global_step}\n" \
                                 f"  Iter: {step}/{iters_every_epoch}\n" \
                                 f"  LR: {self.opt.param_groups[0]['lr']}\n" \
-                                f"  Time: {datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}\n"
+                                f"  Time: {datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}\n" \
+                                f"  Shape param (max): {opdict['pred_shape_code'].max():.4f}\n" \
+                                f"  Shape param (std): {opdict['pred_shape_code'].std():.4f}\n"
                     for k, v in losses.items():
                         loss_info = loss_info + f'  {k}: {v:.4f}\n'
                         if self.cfg.train.write_summary:

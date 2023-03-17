@@ -127,6 +127,7 @@ class MICA(BaseModel):
 
         pred_verts = decoder_output['pred_canonical_shape_vertices']
         gt_verts = decoder_output['flame_verts_shape'].detach()
+        pred_shape_code = decoder_output['pred_shape_code']
 
         pred_verts_shape_canonical_diff = (pred_verts - gt_verts).abs()
 
@@ -134,5 +135,11 @@ class MICA(BaseModel):
             pred_verts_shape_canonical_diff *= self.vertices_mask
 
         losses['pred_verts_shape_canonical_diff'] = torch.mean(pred_verts_shape_canonical_diff) * 1000.0
+
+        too_big = pred_shape_code.abs() > self.cfg.train.max_shape_code
+        losses['shape_code'] = \
+            torch.mean(1000.0 * (pred_shape_code[too_big] - self.cfg.train.max_shape_code)**2) \
+            if too_big.any() else \
+            torch.mean(1e-4 * pred_shape_code[~too_big]**2)
 
         return losses
