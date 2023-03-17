@@ -38,9 +38,7 @@ class MICA(BaseModel):
 
     def create_model(self, model_cfg):
 
-        pretrained_path = None
-        if not model_cfg.use_pretrained:
-            pretrained_path = model_cfg.arcface_pretrained_model
+        pretrained_path = model_cfg.arcface_pretrained_model if model_cfg.arcface_use_pretrained else None
         self.arcface = Arcface(pretrained_path=pretrained_path, unfreeze=model_cfg.arcface_unfreeze).to(self.device)
         self.flameModel = Generator(
             512, 
@@ -51,9 +49,17 @@ class MICA(BaseModel):
             self.device)
 
     def load_model(self):
-        model_path = os.path.join(self.cfg.output_dir, 'model.tar')
-        if os.path.exists(self.cfg.pretrained_model_path) and self.cfg.model.use_pretrained:
+
+        model_path = ''
+
+        if self.testing or not self.cfg.train.fresh:
+            # Look for existing model first
+            model_path = os.path.join(self.cfg.output_dir, 'model.tar')
+
+        if not os.path.exists(model_path) and self.cfg.use_pretrained:
+            # Load pretrained model
             model_path = self.cfg.pretrained_model_path
+
         if os.path.exists(model_path):
             logger.info(f'[{self.tag}] Trained model found. Path: {model_path} | GPU: {self.device}')
             checkpoint = torch.load(model_path)
@@ -62,7 +68,7 @@ class MICA(BaseModel):
             if 'flameModel' in checkpoint:
                 self.flameModel.load_state_dict(checkpoint['flameModel'])
         else:
-            logger.info(f'[{self.tag}] Checkpoint not available starting from scratch!')
+            logger.info(f'[{self.tag}] Starting from scratch!')
 
     def model_dict(self):
         return {
@@ -91,11 +97,17 @@ class MICA(BaseModel):
         shapecode = None
 
         if not self.testing:
+
             flame = codedict['flame']
-            shapecode = flame['shape_params'].view(-1, flame['shape_params'].shape[2])
-            shapecode = shapecode.to(self.device)[:, :self.cfg.model.n_shape]
-            with torch.no_grad():
-                flame_verts_shape, _, _ = self.flame(shape_params=shapecode)
+            if self.cfg.dataset.use_shape_params:
+                
+                shapecode = flame['shape_params'].view(-1, flame['shape_params'].shape[2])
+                shapecode = shapecode.to(self.device)[:, :self.cfg.model.n_shape]
+                with torch.no_grad():
+                    flame_verts_shape, _, _ = self.flame(shape_params=shapecode)
+            
+            else:
+                flame_verts_shape = flame['vertices'].view(-1, flame['vertices'].shape[2], flame['vertices'].shape[3]).to(self.device)
 
         identity_code = codedict['arcface']
         pred_canonical_vertices, pred_shape_code = self.flameModel(identity_code)
@@ -115,6 +127,7 @@ class MICA(BaseModel):
 
         pred_verts = decoder_output['pred_canonical_shape_vertices']
         gt_verts = decoder_output['flame_verts_shape'].detach()
+        pred_shape_code = decoder_output['pred_shape_code']
 
         pred_verts_shape_canonical_diff = (pred_verts - gt_verts).abs()
 
@@ -122,5 +135,11 @@ class MICA(BaseModel):
             pred_verts_shape_canonical_diff *= self.vertices_mask
 
         losses['pred_verts_shape_canonical_diff'] = torch.mean(pred_verts_shape_canonical_diff) * 1000.0
+
+        too_big = pred_shape_code.abs() > self.cfg.train.max_shape_code
+        losses['shape_code'] = \
+            torch.mean(1000.0 * (pred_shape_code[too_big] - self.cfg.train.max_shape_code)**2) \
+            if too_big.any() else \
+            torch.mean(1e-4 * pred_shape_code[~too_big]**2)
 
         return losses

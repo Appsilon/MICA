@@ -36,7 +36,7 @@ def main():
     cfg = get_cfg_defaults()
     render = MeshShapeRenderer(obj_filename=cfg.model.topology_path)
     flame = FLAME(cfg.model).to('cuda:0')
-    datasets = sorted(glob('/home/wzielonka/datasets/MICA/*'))
+    datasets = sorted(glob(str(Path(cfg.dataset.root) / '*')))
     for dataset in tqdm(datasets):
         meshes = sorted(glob(f'{dataset}/FLAME_parameters/*/*.npz'))
         sample_list = np.array(np.random.choice(range(len(meshes)), size=30 * 5))

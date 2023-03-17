@@ -1,20 +1,22 @@
 # Mica config
 
-pretrained_model_path: ''
+use_pretrained: False
 
 dataset:
   root: '/home/andrew/datasets'
-  training_data: [ 'LYHM', 'D3DFACS', 'BU3DFE', 'FRGC', 'Stirling', 'FaceWarehouse', 'BP4D' ]
-  eval_data: [ 'FLORENCE' ]
+  training_data: [ 'VHTRAIN' ]
+  eval_data: [ 'VHVALID' ]
   num_workers: 4
   batch_size: 8
   K: 2
-  use_shape_params: True
+  use_shape_params: False
 
 train:
-  lr: 1e-5
-  arcface_lr: 1e-5
+  lr: 5e-6
+  arcface_lr: 5e-6
   weight_decay: 2e-4
+  max_shape_code: 5.
+  fresh: True
   use_mask: True
   reset_optimizer: False
   max_steps: 160000
@@ -28,5 +30,6 @@ train:
 model:
   arcface_unfreeze: 2
   arcface_use_pretrained: True
-  n_shape: 300
+  hidden_layers_size: 256
+  n_shape: 20
   name: 'mica'
