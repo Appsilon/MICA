@@ -69,7 +69,12 @@ class Trainer(object):
 
         self.validator = Validator(self)
         self.configure_optimizers()
-        self.load_checkpoint()
+
+        self.epoch = 0
+        self.global_step = 0
+        
+        if not self.cfg.train.fresh:
+            self.load_checkpoint()
 
         # reset optimizer if loaded from pretrained model
         if self.cfg.train.reset_optimizer:
@@ -92,13 +97,13 @@ class Trainer(object):
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=1, gamma=0.1)
 
     def load_checkpoint(self):
-        self.epoch = 0
-        self.global_step = 0
         dist.barrier()
         map_location = {'cuda:%d' % 0: 'cuda:%d' % self.device}
         model_path = os.path.join(self.cfg.output_dir, 'model.tar')
-        if os.path.exists(self.cfg.pretrained_model_path):
+        
+        if not os.path.exists(model_path) and self.cfg.use_pretrained:
             model_path = self.cfg.pretrained_model_path
+        
         if os.path.exists(model_path):
             checkpoint = torch.load(model_path, map_location)
             if 'opt' in checkpoint:

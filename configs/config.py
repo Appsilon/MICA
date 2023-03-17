@@ -24,6 +24,7 @@ cfg = CN()
 cfg.mica_dir = str(Path(__file__).parent.parent)
 cfg.device = 'cuda'
 cfg.device_id = '0'
+cfg.use_pretrained = True
 cfg.pretrained_model_path = str(Path(cfg.mica_dir) / 'data/pretrained/mica.tar')
 cfg.output_dir = ''
 
@@ -42,7 +43,7 @@ cfg.model.n_shape = 300
 cfg.model.layers = 8
 cfg.model.hidden_layers_size = 256
 cfg.model.mapping_layers = 3
-cfg.model.use_pretrained = True
+cfg.model.arcface_use_pretrained = True
 cfg.model.arcface_pretrained_model = '/scratch/is-rg-ncs/models_weights/arcface-torch/backbone100.pth'
 cfg.model.arcface_unfreeze = 2
 
@@ -80,6 +81,7 @@ cfg.running_average = 7
 # Options for training
 # ---------------------------------------------------------------------------- #
 cfg.train = CN()
+cfg.train.fresh = False
 cfg.train.use_mask = False
 cfg.train.max_epochs = 50
 cfg.train.max_steps = 100000

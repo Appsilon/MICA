@@ -38,9 +38,7 @@ class MICA(BaseModel):
 
     def create_model(self, model_cfg):
 
-        pretrained_path = None
-        if not model_cfg.use_pretrained:
-            pretrained_path = model_cfg.arcface_pretrained_model
+        pretrained_path = model_cfg.arcface_pretrained_model if model_cfg.arcface_use_pretrained else None
         self.arcface = Arcface(pretrained_path=pretrained_path, unfreeze=model_cfg.arcface_unfreeze).to(self.device)
         self.flameModel = Generator(
             512, 
@@ -51,9 +49,17 @@ class MICA(BaseModel):
             self.device)
 
     def load_model(self):
-        model_path = os.path.join(self.cfg.output_dir, 'model.tar')
-        if os.path.exists(self.cfg.pretrained_model_path) and self.cfg.model.use_pretrained:
+
+        model_path = ''
+
+        if self.testing or not self.cfg.train.fresh:
+            # Look for existing model first
+            model_path = os.path.join(self.cfg.output_dir, 'model.tar')
+
+        if not os.path.exists(model_path) and self.cfg.use_pretrained:
+            # Load pretrained model
             model_path = self.cfg.pretrained_model_path
+
         if os.path.exists(model_path):
             logger.info(f'[{self.tag}] Trained model found. Path: {model_path} | GPU: {self.device}')
             checkpoint = torch.load(model_path)
@@ -62,7 +68,7 @@ class MICA(BaseModel):
             if 'flameModel' in checkpoint:
                 self.flameModel.load_state_dict(checkpoint['flameModel'])
         else:
-            logger.info(f'[{self.tag}] Checkpoint not available starting from scratch!')
+            logger.info(f'[{self.tag}] Starting from scratch!')
 
     def model_dict(self):
         return {

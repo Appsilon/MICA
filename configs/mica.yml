@@ -26,6 +26,6 @@ train:
 
 model:
   arcface_unfreeze: 2
-  use_pretrained: False
+  arcface_use_pretrained: True
   n_shape: 300
   name: 'mica'
