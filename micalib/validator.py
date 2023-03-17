@@ -106,7 +106,7 @@ class Validator(object):
                 codedict['flame'] = flame
                 opdict = self.nfc.decode(codedict, self.trainer.epoch)
                 self.update_embeddings(actors, opdict['faceid'])
-                loss = self.nfc.compute_losses(None, None, opdict)['pred_verts_shape_canonical_diff']
+                loss = self.nfc.compute_losses(None, codedict, opdict)['pred_verts_shape_canonical_diff']
                 optdicts.append((opdict, images, dataset, actors, loss))
 
             # Calculate averages

@@ -28,11 +28,13 @@ from loguru import logger
 from skimage.io import imread
 from torch.utils.data import Dataset
 from torchvision import transforms
+from utils import mesh
 
 
 class BaseDataset(Dataset, ABC):
     def __init__(self, name, config, device, isEval):
         self.K = config.K
+        self.use_shape_params = config.use_shape_params
         self.isEval = isEval
         self.n_train = np.Inf
         self.imagepaths = []
@@ -45,6 +47,7 @@ class BaseDataset(Dataset, ABC):
         self.total_images = 0
         self.image_folder = 'arcface_input'
         self.flame_folder = 'FLAME_parameters'
+        self.obj_folder = 'registrations'
         self.initialize()
 
     def initialize(self):
@@ -90,15 +93,34 @@ class BaseDataset(Dataset, ABC):
             K = max(0, min(200, self.min_max_K))
             sample_list = np.array(range(len(images))[:K])
 
-        params = np.load(os.path.join(self.dataset_root, self.name, self.flame_folder, params_path), allow_pickle=True)
-        pose = torch.tensor(params['pose']).float()
-        betas = torch.tensor(params['betas']).float()
+        if self.use_shape_params:
+            params = np.load(os.path.join(self.dataset_root, self.name, self.flame_folder, params_path), allow_pickle=True)
+            pose = torch.tensor(params['pose']).float()
+            betas = torch.tensor(params['betas']).float()
 
-        flame = {
-            'shape_params': torch.cat(K * [betas[:300][None]], dim=0),
-            'expression_params': torch.cat(K * [betas[300:][None]], dim=0),
-            'pose_params': torch.cat(K * [torch.cat([pose[:3], pose[6:9]])[None]], dim=0),
-        }
+            flame = {
+                'shape_params': torch.cat(K * [betas[:300][None]], dim=0),
+                'expression_params': torch.cat(K * [betas[300:][None]], dim=0),
+                'pose_params': torch.cat(K * [torch.cat([pose[:3], pose[6:9]])[None]], dim=0),
+            }
+
+        else:
+            # Use files
+            obj_path = Path(self.dataset_root, self.name, self.obj_folder, actor)
+
+            # TODO: Hardcoded identifier
+            obj_file = next(obj_path.glob("*_flame.obj"))
+
+            vertices = mesh.get_obj_vertices(obj_file)
+            
+            # Make sure meshes are centred!
+            vertices = np.array(vertices)
+            vertices -= vertices.mean(axis=0)
+            vertices = torch.tensor(vertices).float()
+            
+            flame = {
+                'vertices': torch.cat(K * [vertices[None]], dim=0)
+            }
 
         images_list = []
         arcface_list = []

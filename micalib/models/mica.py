@@ -97,11 +97,17 @@ class MICA(BaseModel):
         shapecode = None
 
         if not self.testing:
+
             flame = codedict['flame']
-            shapecode = flame['shape_params'].view(-1, flame['shape_params'].shape[2])
-            shapecode = shapecode.to(self.device)[:, :self.cfg.model.n_shape]
-            with torch.no_grad():
-                flame_verts_shape, _, _ = self.flame(shape_params=shapecode)
+            if self.cfg.dataset.use_shape_params:
+                
+                shapecode = flame['shape_params'].view(-1, flame['shape_params'].shape[2])
+                shapecode = shapecode.to(self.device)[:, :self.cfg.model.n_shape]
+                with torch.no_grad():
+                    flame_verts_shape, _, _ = self.flame(shape_params=shapecode)
+            
+            else:
+                flame_verts_shape = flame['vertices'].view(-1, flame['vertices'].shape[2], flame['vertices'].shape[3]).to(self.device)
 
         identity_code = codedict['arcface']
         pred_canonical_vertices, pred_shape_code = self.flameModel(identity_code)

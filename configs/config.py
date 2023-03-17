@@ -58,6 +58,7 @@ cfg.dataset.K = 4
 cfg.dataset.n_train = 100000
 cfg.dataset.num_workers = 4
 cfg.dataset.root = '/datasets/MICA/'
+cfg.dataset.use_shape_params = True
 
 # ---------------------------------------------------------------------------- #
 # Mask weights
