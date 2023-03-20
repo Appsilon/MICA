@@ -20,6 +20,7 @@ import subprocess
 from copy import deepcopy
 from datetime import datetime
 
+import cv2
 import numpy as np
 import torch
 from loguru import logger
@@ -129,15 +130,15 @@ class Validator(object):
             loss_info += f'  validation loss (average)         : {average:.5f} \n'
             logger.info(loss_info)
 
-            self.trainer.writer.add_scalar('val/average', average, global_step=self.trainer.global_step)
+            self.trainer.writer.add_scalar('valid_loss/average', average, global_step=self.trainer.global_step)
             for key in avg_per_dataset.keys():
                 l, i = avg_per_dataset[key]
                 avg = l.item() / i
-                self.trainer.writer.add_scalar(f'val/average_{key}', avg, global_step=self.trainer.global_step)
+                self.trainer.writer.add_scalar(f'valid_loss/average_{key}', avg, global_step=self.trainer.global_step)
 
             # Save best model
             smoothed_weighted, smoothed = self.best_model(weighted_average, average)
-            self.trainer.writer.add_scalar(f'val/smoothed_average', smoothed, global_step=self.trainer.global_step)
+            self.trainer.writer.add_scalar(f'valid_loss/smoothed_average', smoothed, global_step=self.trainer.global_step)
 
             # self.now()
 
@@ -171,9 +172,11 @@ class Validator(object):
                 "input": input_images
             }
 
-            savepath = os.path.join(self.cfg.output_dir, self.cfg.train.val_vis_dir, f'{self.trainer.global_step:08}.jpg')
-            util.visualize_grid(visdict, savepath, size=512)
+            grid_image = util.visualize_grid(visdict, size=512)
+            self.trainer.writer.add_image("valid_images/comparison", grid_image[:, :, ::-1], self.trainer.global_step, dataformats="HWC")
 
+            savepath = os.path.join(self.cfg.output_dir, self.cfg.train.val_vis_dir, f'{self.trainer.global_step:08}.jpg')
+            cv2.imwrite(savepath, grid_image)
     def now(self):
         logger.info(f'[Validator] NoW testing has begun...')
         # self.tester.test_now('', 'training', self.nfc.model_dict())
@@ -188,5 +191,5 @@ class Validator(object):
 
         self.best_model.now(median, mean, std)
 
-        self.trainer.writer.add_scalar(f'val/now_mean', mean, global_step=self.trainer.global_step)
+        self.trainer.writer.add_scalar(f'valid_loss/now_mean', mean, global_step=self.trainer.global_step)
         logger.info(f'[Validator] NoW testing has ended...')

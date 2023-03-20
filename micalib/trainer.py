@@ -20,6 +20,7 @@ import random
 import sys
 from datetime import datetime
 
+import cv2
 import numpy as np
 import torch
 import torch.distributed as dist
@@ -238,12 +239,6 @@ class Trainer(object):
                     logger.info(loss_info)
 
                 if visualizeTraining and self.device == 0:
-                    visdict = {
-                        'input_images': opdict['images'],
-                    }
-                    # add images to tensorboard
-                    for k, v in visdict.items():
-                        self.writer.add_images(k, np.clip(v.detach().cpu(), 0.0, 1.0), self.global_step)
 
                     pred_canonical_shape_vertices = torch.empty(0, 3, 512, 512).cuda()
                     flame_verts_shape = torch.empty(0, 3, 512, 512).cuda()
@@ -270,8 +265,13 @@ class Trainer(object):
                     visdict["flame_verts_shape"] = flame_verts_shape
                     visdict["images"] = input_images
 
+                    grid_image = util.visualize_grid(visdict, size=512)
+
+                    self.writer.add_images("train_images/batch_input", np.clip(opdict['images'].detach().cpu(), 0.0, 1.0), self.global_step)
+                    self.writer.add_images("train_images/comparison", grid_image[:, :, ::-1], self.global_step, dataformats="HWC")
+
                     savepath = os.path.join(self.cfg.output_dir, 'train_images/train_' + str(epoch) + '.jpg')
-                    util.visualize_grid(visdict, savepath, size=512)
+                    cv2.imwrite(savepath, grid_image)
 
                 if self.global_step % self.cfg.train.val_steps == 0:
                     self.validation_step()
