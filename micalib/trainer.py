@@ -152,15 +152,13 @@ class Trainer(object):
         encoder_output['flame'] = flame
 
         decoder_output = self.nfc.decode(encoder_output, self.epoch)
-        losses = self.nfc.compute_losses(inputs, encoder_output, decoder_output)
+        metrics = self.nfc.compute_losses(inputs, encoder_output, decoder_output)
 
-        all_loss = 0.
-        losses_key = losses.keys()
+        loss = 0.
+        for key in self.cfg.train.loss_keys:
+            loss = loss + metrics[key]
 
-        for key in losses_key:
-            all_loss = all_loss + losses[key]
-
-        losses['all_loss'] = all_loss
+        metrics['loss'] = loss
 
         opdict = \
             {
@@ -173,7 +171,7 @@ class Trainer(object):
         if 'deca' in decoder_output:
             opdict['deca'] = decoder_output['deca']
 
-        return losses, opdict
+        return metrics, opdict
 
     def validation_step(self):
         self.validator.run()
@@ -218,8 +216,8 @@ class Trainer(object):
                 self.opt.zero_grad()
                 losses, opdict = self.training_step(batch)
 
-                all_loss = losses['all_loss']
-                all_loss.backward()
+                loss = losses['loss']
+                loss.backward()
                 self.opt.step()
                 self.global_step += 1
 
@@ -229,9 +227,7 @@ class Trainer(object):
                                 f"  Step: {self.global_step}\n" \
                                 f"  Iter: {step}/{iters_every_epoch}\n" \
                                 f"  LR: {self.opt.param_groups[0]['lr']}\n" \
-                                f"  Time: {datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}\n" \
-                                f"  Shape param (max): {opdict['pred_shape_code'].max():.4f}\n" \
-                                f"  Shape param (std): {opdict['pred_shape_code'].std():.4f}\n"
+                                f"  Time: {datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}\n"
                     for k, v in losses.items():
                         loss_info = loss_info + f'  {k}: {v:.4f}\n'
                         if self.cfg.train.write_summary:

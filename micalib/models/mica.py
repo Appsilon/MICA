@@ -26,6 +26,7 @@ import torch.nn.functional as F
 from models.arcface import Arcface
 from models.generator import Generator
 from micalib.base_model import BaseModel
+from utils.loss import chamfer_distance
 
 from loguru import logger
 
@@ -123,23 +124,38 @@ class MICA(BaseModel):
         return output
 
     def compute_losses(self, input, encoder_output, decoder_output):
-        losses = {}
+        metrics = {}
 
-        pred_verts = decoder_output['pred_canonical_shape_vertices']
-        gt_verts = decoder_output['flame_verts_shape'].detach()
+        pred_verts = decoder_output['pred_canonical_shape_vertices'] * 1000.0
+        gt_verts = decoder_output['flame_verts_shape'].detach() * 1000.0
         pred_shape_code = decoder_output['pred_shape_code']
 
-        pred_verts_shape_canonical_diff = (pred_verts - gt_verts).abs()
+        ## Vertex based metrics
+        # verts_diff = (pred_verts - gt_verts).abs()
+        metrics['pred_distance'] = ((pred_verts - gt_verts) ** self.cfg.train.norm).sum(-1) ** 0.5
+        metrics['pred_chamfer_distance'], _ = chamfer_distance(pred_verts, gt_verts, norm=self.cfg.train.norm)
 
-        if self.use_mask:
-            pred_verts_shape_canonical_diff *= self.vertices_mask
+        # Updating losses with mask and reducing
+        for k, v in metrics.items():
+            if self.use_mask:
+                if len(v.shape) == 3:
+                    v *= self.vertices_mask
+                else:
+                    v *= self.vertices_mask[:, :, 0]
 
-        losses['pred_verts_shape_canonical_diff'] = torch.mean(pred_verts_shape_canonical_diff) * 1000.0
+            metrics[k] = torch.mean(v)
 
-        too_big = pred_shape_code.abs() > self.cfg.train.max_shape_code
-        losses['shape_code'] = \
-            torch.mean(1000.0 * (pred_shape_code[too_big] - self.cfg.train.max_shape_code)**2) \
-            if too_big.any() else \
-            torch.mean(1e-4 * pred_shape_code[~too_big]**2)
+        ## Shape parameters based metrics
+        metrics['std_shape_code'] = pred_shape_code.std()
 
-        return losses
+        if self.cfg.train.max_shape_code < float("inf"):
+            
+            too_big = pred_shape_code.abs() > self.cfg.train.max_shape_code
+            metrics['penalty_shape_code'] = \
+                torch.mean(1000.0 * (pred_shape_code[too_big] - self.cfg.train.max_shape_code)**2) \
+                if too_big.any() else \
+                torch.mean(1e-7 * pred_shape_code[~too_big]**2)
+        else:
+            metrics['penalty_shape_code'] = torch.tensor(0)
+
+        return metrics
