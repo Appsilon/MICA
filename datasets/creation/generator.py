@@ -53,17 +53,28 @@ class Generator:
         self.ARCFACE = 'arcface_input'
 
     def copy(self):
-        logger.info('Start copying...')
+        logger.info('Start copying...')        
         for instance in tqdm(self.instances):
+
+            payloads = [(instance, instance.get_registrations, 'registrations', instance.transform_path)]
+            with Pool(processes=len(payloads)) as pool:
+                for _ in tqdm(pool.imap_unordered(_copy, payloads), total=len(payloads)):
+                    pass
+
             payloads = [(instance, instance.get_images, 'images', instance.transform_path)]
             with Pool(processes=len(payloads)) as pool:
                 for _ in tqdm(pool.imap_unordered(_copy, payloads), total=len(payloads)):
                     pass
 
     def preprocess(self):
-        logger.info('Start preprocessing...')
+        logger.info('Start pre-processing...')
         for instance in tqdm(self.instances):
             instance.preprocess()
+
+    def postprocess(self):
+        logger.info('Start post-processing...')
+        for instance in tqdm(self.instances):
+            instance.postprocess()
 
     def arcface(self):
         app = FaceAnalysis(name='antelopev2', providers=['CUDAExecutionProvider'])
@@ -76,6 +87,12 @@ class Generator:
                 dst = image_path.replace('images', self.ARCFACE)
                 Path(dst).parent.mkdir(exist_ok=True, parents=True)
                 for img in instance.transform_image(get_image(image_path[0:-4])):
+                    
+                    # Fix for broken images
+                    if img is None:
+                        print(f"Image is broken: {image_path}")
+                        continue
+
                     bboxes, kpss = app.det_model.detect(img, max_num=0, metric='default')
                     if bboxes.shape[0] == 0:
                         continue
@@ -96,3 +113,4 @@ class Generator:
         self.copy()
         self.preprocess()
         self.arcface()
+        self.postprocess()

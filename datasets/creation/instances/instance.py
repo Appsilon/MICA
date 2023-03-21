@@ -24,7 +24,7 @@ from pytorch3d.transforms import RotateAxisAngle
 
 class Instance:
     def __init__(self):
-        self.mount = '/home/andrew'
+        self.mount = ''
         self.dst = 'empty'
         self.src = 'empty'
         self.device = 'cuda:0'
@@ -43,6 +43,10 @@ class Instance:
 
     @abstractmethod
     def preprocess(self):
+        pass
+
+    @abstractmethod
+    def postprocess(self):
         pass
 
     @abstractmethod

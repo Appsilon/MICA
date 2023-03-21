@@ -86,7 +86,7 @@ class BaseDataset(Dataset, ABC):
         actor = self.imagepaths[index]
         images, params_path = self.face_dict[actor]
         images = [Path(self.dataset_root, self.name, self.image_folder, path) for path in images]
-        sample_list = np.array(np.random.choice(range(len(images)), size=self.K, replace=False))
+        sample_list = np.array(np.random.choice(range(len(images)), size=self.K, replace=self.K > len(images)))
 
         K = self.K
         if self.isEval:
@@ -106,15 +106,15 @@ class BaseDataset(Dataset, ABC):
 
         else:
             # Use files
-            obj_path = Path(self.dataset_root, self.name, self.obj_folder, actor)
+            vertex_path = Path(self.dataset_root, self.name, self.obj_folder, actor)
 
-            # TODO: Hardcoded identifier
-            obj_file = next(obj_path.glob("*_flame.obj"))
-
-            vertices = mesh.get_obj_vertices(obj_file)
+            vertex_file = list(vertex_path.glob("*.npy"))
+            if not vertex_file:
+                raise FileNotFoundError(vertex_path)
+            
+            vertices = np.load(vertex_file[0])
             
             # Make sure meshes are centred!
-            vertices = np.array(vertices)
             vertices -= vertices.mean(axis=0)
             vertices = torch.tensor(vertices).float()
             
