@@ -153,7 +153,7 @@ class Validator(object):
             # Plot individual averaged metrics
             summed_metrics = reduce(add, (map(Counter, all_metrics)))
             for key, val in summed_metrics.items():
-                avg = val / len(summed_metrics)
+                avg = val / len(optdicts)
                 self.trainer.writer.add_scalar(f'valid_loss/{key}_average', avg, global_step=self.trainer.global_step)
             
             # self.now()
@@ -174,7 +174,7 @@ class Validator(object):
             input_images = torch.empty(0, 3, 224, 224).cuda()
 
             for i in np.random.choice(range(0, len(optdicts)), size=4, replace=False):
-                opdict, images, _, _, _ = optdicts[i]
+                opdict, images = optdicts[i][:2]
                 n = np.random.randint(0, len(images) - 1)
                 rendering = self.nfc.render.render_mesh(opdict['pred_canonical_shape_vertices'][n:n + 1, ...])
                 pred_canonical_shape_vertices = torch.cat([pred_canonical_shape_vertices, rendering])
