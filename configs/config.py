@@ -44,8 +44,8 @@ cfg.model.layers = 8
 cfg.model.hidden_layers_size = 300
 cfg.model.mapping_layers = 3
 cfg.model.arcface_use_pretrained = True
-cfg.model.arcface_pretrained_model = '/scratch/is-rg-ncs/models_weights/arcface-torch/backbone100.pth'
-cfg.model.arcface_unfreeze = 2
+cfg.model.arcface_pretrained_model = str(Path.home() / '.insightface/models/arcface/backbone.pth')
+cfg.model.arcface_unfreeze = 0
 
 # ---------------------------------------------------------------------------- #
 # Options for Dataset
@@ -57,7 +57,7 @@ cfg.dataset.batch_size = 2
 cfg.dataset.K = 4
 cfg.dataset.n_train = 100000
 cfg.dataset.num_workers = 4
-cfg.dataset.root = '/datasets/MICA/'
+cfg.dataset.root = '/mnt/disks/data/datasets'
 cfg.dataset.use_shape_params = True
 
 # ---------------------------------------------------------------------------- #
@@ -74,7 +74,7 @@ cfg.mask_weights.eye_region = 50.0
 
 cfg.mask_weights.whole = 1.0
 cfg.mask_weights.ears = 0.01
-cfg.mask_weights.eyes = 0.01
+cfg.mask_weights.eyes = 1e-6
 
 cfg.running_average = 7
 
@@ -89,7 +89,9 @@ cfg.train.max_steps = 100000
 cfg.train.lr = 1e-4
 cfg.train.arcface_lr = 1e-3
 cfg.train.weight_decay = 0.0
+cfg.train.loss_keys = ['pred_distance', 'penalty_shape_code']
 cfg.train.max_shape_code = float("inf")
+cfg.train.norm = 2
 cfg.train.lr_update_step = 100000000
 cfg.train.log_dir = 'logs'
 cfg.train.log_steps = 10
@@ -119,10 +121,10 @@ def parse_args():
 
     cfg = get_cfg_defaults()
 
+    config_file = "scratch.yml"
+
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--cfg', type=str, help='cfg file path', default=str(Path(cfg.mica_dir) / "configs/mica.yml")) # required=True
-    # parser.add_argument('--cfg', type=str, help='cfg file path', default=str(Path(cfg.mica_dir) / "configs/custom.yml"))
-    parser.add_argument('--cfg', type=str, help='cfg file path', default=str(Path(cfg.mica_dir) / "configs/scratch.yml"))
+    parser.add_argument('--cfg', type=str, help='cfg file path', default=str(Path(cfg.mica_dir) / f"configs/{config_file}"))
     parser.add_argument('--test_dataset', type=str, help='Test dataset type', default='')
     parser.add_argument('--checkpoint', type=str, help='Checkpoint to load', default='')
 

@@ -3,7 +3,7 @@
 use_pretrained: False
 
 dataset:
-  root: '/home/andrew/datasets'
+  root: '/mnt/disks/data/datasets'
   training_data: [ 'VHTRAIN' ]
   eval_data: [ 'VHVALID' ]
   num_workers: 4

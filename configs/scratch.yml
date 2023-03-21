@@ -3,33 +3,39 @@
 use_pretrained: False
 
 dataset:
-  root: '/home/andrew/datasets'
-  training_data: [ 'VHTRAIN' ]
-  eval_data: [ 'VHVALID' ]
+  root: '/mnt/disks/data/datasets'
+  training_data: [ 'VHTRAIN', 'MHTRAIN' ]
+  eval_data: [ 'VHVALID', 'MHVALID' ]
   num_workers: 4
   batch_size: 8
-  K: 2
+  K: 4
   use_shape_params: False
 
 train:
-  lr: 5e-6
-  arcface_lr: 5e-6
+  lr: 1e-5
+  arcface_lr: 1e-5
   weight_decay: 2e-4
-  max_shape_code: 5.
+  max_shape_code: 3.5
+  norm: 2
   fresh: True
   use_mask: True
   reset_optimizer: False
-  max_steps: 160000
+  max_steps: 10000
   log_steps: 50
-  val_steps: 300
-  vis_steps: 1200
-  val_save_img: 1200
+  val_steps: 200
+  vis_steps: 1000
+  val_save_img: 1000
   checkpoint_steps: 1000
   checkpoint_epochs_steps: 10000
 
 model:
   arcface_unfreeze: 2
   arcface_use_pretrained: True
-  hidden_layers_size: 256
-  n_shape: 20
+  hidden_layers_size: 300
+  n_shape: 300
   name: 'mica'
+
+mask_weights:
+  face: 150.
+  ears: 1.
+  eyes: 1e-6
