@@ -52,6 +52,7 @@ if __name__ == '__main__':
     # Run experiments
     for name, exp_cfg in experiments.items():
 
+        print(f"Running experiment: {name}")
         torch.cuda.empty_cache()
 
         try:

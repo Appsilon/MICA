@@ -135,15 +135,24 @@ class MICA(BaseModel):
         metrics['pred_distance'] = ((pred_verts - gt_verts) ** self.cfg.train.norm).sum(-1) ** 0.5
         metrics['pred_chamfer_distance'], _ = chamfer_distance(pred_verts, gt_verts, norm=self.cfg.train.norm)
 
-        # Updating losses with mask and reducing
-        for k, v in metrics.items():
-            if self.use_mask:
-                if len(v.shape) == 3:
-                    v *= self.vertices_mask
+        # Updating metrics with mask
+        if self.use_mask:
+            unmasked_metrics = {}
+            for key, val in metrics.items():
+                if len(val.shape) == 3:
+                    masked_val = val * self.vertices_mask
                 else:
-                    v *= self.vertices_mask[:, :, 0]
+                    masked_val = val * self.vertices_mask[:, :, 0]
 
-            metrics[k] = torch.mean(v)
+                # Overwritting original key, setting unmasked version
+                unmasked_metrics[f"unmasked_{key}"] = val
+                metrics[key] = torch.mean(masked_val)
+
+        metrics.update(unmasked_metrics)
+        # Reduce metrics
+        for key, val in metrics.items():
+
+            metrics[key] = torch.mean(val)
 
         ## Shape parameters based metrics
         metrics['std_shape_code'] = pred_shape_code.std()
