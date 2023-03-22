@@ -29,7 +29,7 @@ train:
   checkpoint_epochs_steps: 10000
 
 model:
-  arcface_unfreeze: 2
+  arcface_unfreeze: 0
   arcface_use_pretrained: True
   hidden_layers_size: 300
   n_shape: 300
