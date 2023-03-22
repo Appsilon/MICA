@@ -178,7 +178,11 @@ class Arcface(IResNet):
         self.layers = [self.conv1, self.bn1, self.prelu, self.layer1, self.layer2, self.layer3, self.layer4, self.bn2]
         self.unfreeze = unfreeze
         
-        self.freezer(self.layers[:-unfreeze])
+        if unfreeze == 0:
+            self.freezer(self.layers)
+        else:
+            # Freeze until last N layers
+            self.freezer(self.layers[:-abs(unfreeze)])
 
     def freezer(self, layers):
         for layer in layers:
