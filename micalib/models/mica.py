@@ -131,8 +131,10 @@ class MICA(BaseModel):
         pred_shape_code = decoder_output['pred_shape_code']
 
         ## Vertex based metrics
-        # verts_diff = (pred_verts - gt_verts).abs()
+        metrics['mica_distance'] = (pred_verts - gt_verts).abs()
+        # Requires prediction and ground truth with same order
         metrics['pred_distance'] = ((pred_verts - gt_verts) ** self.cfg.train.norm).sum(-1) ** 0.5
+        # Should work with arbitrary point clouds
         metrics['pred_chamfer_distance'], _ = chamfer_distance(pred_verts, gt_verts, norm=self.cfg.train.norm)
 
         # Updating metrics with mask

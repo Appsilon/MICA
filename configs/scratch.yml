@@ -4,33 +4,35 @@ use_pretrained: False
 
 dataset:
   root: '/mnt/disks/data/datasets'
-  training_data: [ 'VHTRAIN', 'MHTRAIN' ]
+  training_data: [ 'VHTRAIN', 'MHTRAIN' ]   # Names of dataset and numpy image path file
   eval_data: [ 'VHVALID', 'MHVALID' ]
   num_workers: 4
   batch_size: 8
-  K: 4
+  K: 4                                      # Number of images used per subject
   use_shape_params: False
 
 train:
   lr: 1e-5
   arcface_lr: 1e-5
   weight_decay: 2e-4
-  max_shape_code: 3.5
-  norm: 2
-  fresh: True
-  use_mask: True
+  max_shape_code: 3.5                       # Maximum allowed absolute shape paramater
+  norm: 2                                   # Norm value for distance calculations
+  fresh: True                               # Whether to train a fresh model (overwrite existing)
+  use_mask: True                            # Whether to use mask for loss function
   reset_optimizer: False
   max_steps: 10000
   log_steps: 50
   val_steps: 200
   vis_steps: 1000
   val_save_img: 1000
-  checkpoint_steps: 1000
-  checkpoint_epochs_steps: 10000
+  checkpoint_steps: 1000                    # Overwrite model.tar
+  checkpoint_epochs_steps: 10000            # Save a new tar file (model_10000.tar etc.)
+  loss_keys: ['pred_chamfer_distance', 'penalty_shape_code'] # Metrics to use as loss
 
 model:
-  arcface_unfreeze: 0
+  arcface_unfreeze: 0                       # Number Arcface layers to unfreeze
   arcface_use_pretrained: True
+  mapping_layers: 3
   hidden_layers_size: 300
   n_shape: 300
   name: 'mica'
