@@ -20,7 +20,7 @@ train:
   fresh: True                               # Whether to train a fresh model (overwrite existing)
   use_mask: True                            # Whether to use mask for loss function
   reset_optimizer: False
-  max_steps: 10000
+  max_steps: 30000
   log_steps: 50
   val_steps: 200
   vis_steps: 1000

@@ -1,5 +1,6 @@
 import os
 import sys
+from time import sleep
 
 import torch
 import torch.backends.cudnn as cudnn
@@ -59,3 +60,9 @@ if __name__ == '__main__':
             train(rank=0, world_size=1, cfg=exp_cfg)
         except Exception as e:
             print(e)
+        
+        # Give processes time to shutdown
+        sleep(30)
+
+    # Shutdown once complete
+    os.system("sudo shutdown")
