@@ -55,7 +55,8 @@ class Validator(object):
         self.val_dataset, total_images = datasets.build_val(self.cfg.dataset, self.device)
         self.val_dataloader = DataLoader(
             self.val_dataset,
-            batch_size=2,
+            # NOTE: Batch size must be 1 as different datasets may have different K values, which will cause error during concatenation.
+            batch_size=1,
             shuffle=False,
             num_workers=4,
             pin_memory=True,
