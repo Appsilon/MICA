@@ -110,7 +110,7 @@ class BaseDataset(Dataset, ABC):
 
             vertex_file = list(vertex_path.glob("*.npy"))
             if not vertex_file:
-                raise FileNotFoundError(vertex_path)
+                raise FileNotFoundError(f"Vertex file not found in: {vertex_path}")
             
             vertices = np.load(vertex_file[0])
             

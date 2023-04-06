@@ -91,7 +91,7 @@ class Masking(nn.Module):
         left = self.masks.left_eye_region
         right = self.masks.right_eye_region
 
-        return np.unique(np.concatenate((left, right, self.get_mask_eyes())))
+        return np.unique(np.concatenate((left, right)))
 
     def get_mask_nose(self):
         return self.masks.nose
@@ -101,6 +101,15 @@ class Masking(nn.Module):
         right = self.masks.right_ear
 
         return np.unique(np.concatenate((left, right)))
+
+    def get_mask_neck(self):
+        return self.masks.neck
+
+    def get_mask_scalp(self):
+        return self.masks.scalp
+
+    def get_mask_boundary(self):
+        return self.masks.boundary
 
     def get_triangle_face_mask(self):
         m = self.masks.face
@@ -176,11 +185,21 @@ class Masking(nn.Module):
         return mask[:, :, 0:1]
 
     def get_weights_per_vertex(self):
+        # Ordered to avoid overwriting smaller regions with larger ones
         mask = torch.ones_like(self.vertices[None]).detach() * self.cfg.whole
 
         mask[:, self.get_mask_eyes(), :] = self.cfg.eyes
         mask[:, self.get_mask_ears(), :] = self.cfg.ears
         mask[:, self.get_mask_face(), :] = self.cfg.face
+        mask[:, self.get_mask_neck(), :] = self.cfg.neck
+        mask[:, self.get_mask_scalp(), :] = self.cfg.scalp
+        mask[:, self.get_mask_boundary(), :] = self.cfg.boundary
+
+        mask[:, self.get_mask_forehead(), :] = self.cfg.forehead
+        mask[:, self.get_mask_lips(), :] = self.cfg.lips
+        mask[:, self.get_mask_nose(), :] = self.cfg.nose
+        mask[:, self.get_mask_eye_region(), :] = self.cfg.eye_region
+        mask[:, self.get_mask_lr_eye_region(), :] = self.cfg.lr_eye_region
 
         return mask
 

@@ -66,13 +66,16 @@ cfg.dataset.use_shape_params = True
 # ---------------------------------------------------------------------------- #
 cfg.mask_weights = CN()
 cfg.mask_weights.face = 150.0
-cfg.mask_weights.nose = 50.0
-cfg.mask_weights.lips = 50.0
-cfg.mask_weights.forehead = 50.0
-cfg.mask_weights.lr_eye_region = 50.0
-cfg.mask_weights.eye_region = 50.0
+cfg.mask_weights.nose = 150.0
+cfg.mask_weights.lips = 150.0
+cfg.mask_weights.forehead = 150.0
+cfg.mask_weights.lr_eye_region = 150.0
+cfg.mask_weights.eye_region = 150.0
 
 cfg.mask_weights.whole = 1.0
+cfg.mask_weights.neck = 1.0
+cfg.mask_weights.scalp = 1.0
+cfg.mask_weights.boundary = 1.0
 cfg.mask_weights.ears = 0.01
 cfg.mask_weights.eyes = 1e-6
 

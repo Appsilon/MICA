@@ -8,7 +8,7 @@ from configs.config import cfg
 
 
 class VirtualHumans(Instance, ABC):
-    def __init__(self, name: str,  src: str, dst: str, det_score: float = 0.75):
+    def __init__(self, name: str,  src: str, dst: str = cfg.dataset.root, det_score: float = 0.75):
         super(VirtualHumans, self).__init__()
         self.name = name.upper()
         self.src = src
