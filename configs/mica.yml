@@ -15,7 +15,6 @@ train:
   lr: 1e-5
   arcface_lr: 1e-5
   weight_decay: 2e-4
-  use_mask: True
   reset_optimizer: False
   max_steps: 160000
   log_steps: 50

@@ -154,11 +154,19 @@ class Trainer(object):
         decoder_output = self.nfc.decode(encoder_output, self.epoch)
         metrics = self.nfc.compute_losses(inputs, encoder_output, decoder_output)
 
-        loss = 0.
+        total_loss = 0.
+        losses = {}
         for key in self.cfg.train.loss_keys:
-            loss = loss + metrics[key]
+            
+            if key in metrics["masked"]:
+                loss = metrics["masked"][key]
+            else:
+                loss = metrics["regular"][key]
+        
+            losses[key] = loss
+            total_loss += loss
 
-        metrics['loss'] = loss
+        losses["total"] = total_loss
 
         opdict = \
             {
@@ -171,7 +179,7 @@ class Trainer(object):
         if 'deca' in decoder_output:
             opdict['deca'] = decoder_output['deca']
 
-        return metrics, opdict
+        return losses, metrics, opdict
 
     def validation_step(self):
         self.validator.run()
@@ -214,10 +222,9 @@ class Trainer(object):
                 visualizeTraining = self.global_step % self.cfg.train.vis_steps == 0
 
                 self.opt.zero_grad()
-                losses, opdict = self.training_step(batch)
+                losses, all_metrics, opdict = self.training_step(batch)
 
-                loss = losses['loss']
-                loss.backward()
+                losses["total"].backward()
                 self.opt.step()
                 self.global_step += 1
 
@@ -228,10 +235,25 @@ class Trainer(object):
                                 f"  Iter: {step}/{iters_every_epoch}\n" \
                                 f"  LR: {self.opt.param_groups[0]['lr']}\n" \
                                 f"  Time: {datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}\n"
+                    
                     for k, v in losses.items():
-                        loss_info = loss_info + f'  {k}: {v:.4f}\n'
+                        
+                        loss_info = loss_info + f'  loss_{k}: {v:.4f}\n'
+
                         if self.cfg.train.write_summary:
-                            self.writer.add_scalar('train_loss/' + k, v, global_step=self.global_step)
+                            self.writer.add_scalar('train_metrics_loss/' + k, v, global_step=self.global_step)
+
+                    for metric_type, metrics in all_metrics.items():
+                        
+                        for k, v in metrics.items():
+                            
+                            # Avoid repeating metrics used for loss
+                            if k not in losses:
+                                loss_info = loss_info + f'  {metric_type}_{k}: {v:.4f}\n'
+
+                            if self.cfg.train.write_summary:
+                                self.writer.add_scalar(f'train_metrics_{metric_type}/' + k, v, global_step=self.global_step)
+
                     logger.info(loss_info)
 
                 if visualizeTraining and self.device == 0:

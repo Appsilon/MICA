@@ -18,7 +18,6 @@ train:
   max_shape_code: 3.5                       # Maximum allowed absolute shape paramater
   norm: 2                                   # Norm value for distance calculations
   fresh: True                               # Whether to train a fresh model (overwrite existing)
-  use_mask: True                            # Whether to use mask for loss function
   reset_optimizer: False
   max_steps: 30000
   log_steps: 50

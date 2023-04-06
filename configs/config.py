@@ -86,7 +86,6 @@ cfg.running_average = 7
 # ---------------------------------------------------------------------------- #
 cfg.train = CN()
 cfg.train.fresh = False
-cfg.train.use_mask = False
 cfg.train.max_epochs = 50
 cfg.train.max_steps = 100000
 cfg.train.lr = 1e-4

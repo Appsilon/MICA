@@ -19,7 +19,7 @@ import os
 import subprocess
 from copy import deepcopy
 from datetime import datetime
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import reduce
 from operator import add
 
@@ -113,27 +113,39 @@ class Validator(object):
                 self.update_embeddings(actors, opdict['faceid'])
                 metrics = self.nfc.compute_losses(None, codedict, opdict)
 
-                loss = 0.
+                total_loss = 0.
+                losses = {}
                 for key in self.cfg.train.loss_keys:
-                    loss = loss + metrics[key]
+                    
+                    if key in metrics["masked"]:
+                        loss = metrics["masked"][key]
+                    else:
+                        loss = metrics["regular"][key]
+                
+                    losses[key] = loss
+                    total_loss += loss
 
-                optdicts.append((opdict, images, dataset, actors, loss, metrics))
+                losses["total"] = total_loss
+
+                optdicts.append((opdict, images, dataset, actors, losses, metrics))
 
             # Calculate averages
             weighted_average = 0.
             average = 0.
-            avg_per_dataset = {}
-            all_metrics = []
+            avg_per_dataset = defaultdict(lambda: (0., 0.))
+            all_metrics = defaultdict(list)
+
             for optdict in optdicts:
-                opdict, images, dataset, actors, loss, metrics = optdict
+                opdict, images, dataset, actors, losses, metrics = optdict
                 name = dataset[0]
-                all_metrics.append(metrics)
-                average += loss
-                if name not in avg_per_dataset:
-                    avg_per_dataset[name] = (loss, 1.)
-                else:
-                    l, i = avg_per_dataset[name]
-                    avg_per_dataset[name] = (l + loss, i + 1.)
+
+                for k, v in metrics.items():
+                    all_metrics[k].append(v)
+
+                average += losses["total"]
+                
+                l, i = avg_per_dataset[name]
+                avg_per_dataset[name] = (l + losses["total"], i + 1) 
 
             average = average.item() / len(optdicts)
 
@@ -141,21 +153,23 @@ class Validator(object):
             loss_info += f'  validation loss (average)         : {average:.5f} \n'
             logger.info(loss_info)
 
-            self.trainer.writer.add_scalar('valid_loss/loss_average', average, global_step=self.trainer.global_step)
+            self.trainer.writer.add_scalar('valid_metrics_loss/average', average, global_step=self.trainer.global_step)
             for key in avg_per_dataset.keys():
                 l, i = avg_per_dataset[key]
                 avg = l.item() / i
-                self.trainer.writer.add_scalar(f'valid_loss/loss_average_{key}', avg, global_step=self.trainer.global_step)
+                self.trainer.writer.add_scalar(f'valid_metrics_loss/average_{key}', avg, global_step=self.trainer.global_step)
 
             # Save best model
             smoothed_weighted, smoothed = self.best_model(weighted_average, average)
-            self.trainer.writer.add_scalar(f'valid_loss/smoothed_average', smoothed, global_step=self.trainer.global_step)
+            self.trainer.writer.add_scalar(f'valid_metrics_loss/smoothed', smoothed, global_step=self.trainer.global_step)
 
             # Plot individual averaged metrics
-            summed_metrics = reduce(add, (map(Counter, all_metrics)))
-            for key, val in summed_metrics.items():
-                avg = val / len(optdicts)
-                self.trainer.writer.add_scalar(f'valid_loss/{key}_average', avg, global_step=self.trainer.global_step)
+            for metric_type, metrics in all_metrics.items():
+                
+                summed_metrics = reduce(add, (map(Counter, metrics)))
+                for key, val in summed_metrics.items():
+                    avg = val / len(optdicts)
+                    self.trainer.writer.add_scalar(f'valid_metrics_{metric_type}/{key}_average', avg, global_step=self.trainer.global_step)
             
             # self.now()
 

@@ -36,7 +36,6 @@ class BaseModel(nn.Module):
             self.cfg = config
 
         self.tag = tag
-        self.use_mask = self.cfg.train.use_mask
         self.device = device
         self.masking = Masking(config)
         self.testing = self.cfg.model.testing

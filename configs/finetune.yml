@@ -17,7 +17,6 @@ train:
   weight_decay: 2e-4
   max_shape_code: 3.
   fresh: True
-  use_mask: True
   reset_optimizer: False
   max_steps: 160000
   log_steps: 50

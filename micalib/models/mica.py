@@ -124,49 +124,53 @@ class MICA(BaseModel):
         return output
 
     def compute_losses(self, input, encoder_output, decoder_output):
-        metrics = {}
+        regular_metrics = {}
 
         pred_verts = decoder_output['pred_canonical_shape_vertices'] * 1000.0
         gt_verts = decoder_output['flame_verts_shape'].detach() * 1000.0
         pred_shape_code = decoder_output['pred_shape_code']
 
         ## Vertex based metrics
-        metrics['mica_distance'] = (pred_verts - gt_verts).abs()
-        # Requires prediction and ground truth with same order
-        metrics['pred_distance'] = ((pred_verts - gt_verts) ** self.cfg.train.norm).sum(-1) ** 0.5
+        # Require prediction and ground truth with same order
+        regular_metrics['mica_distance'] = (pred_verts - gt_verts).abs()
+        regular_metrics['pred_distance_l1'] = (pred_verts - gt_verts).abs().sum(-1)
+        regular_metrics['pred_distance_l2'] = ((pred_verts - gt_verts) ** 2).sum(-1) ** 0.5
         # Should work with arbitrary point clouds
-        metrics['pred_chamfer_distance'], _ = chamfer_distance(pred_verts, gt_verts, norm=self.cfg.train.norm)
+        regular_metrics['pred_chamfer_distance'], _ = chamfer_distance(pred_verts, gt_verts, norm=self.cfg.train.norm)
 
-        # Updating metrics with mask
-        if self.use_mask:
-            unmasked_metrics = {}
-            for key, val in metrics.items():
-                if len(val.shape) == 3:
-                    masked_val = val * self.vertices_mask
-                else:
-                    masked_val = val * self.vertices_mask[:, :, 0]
+        ## Get masked metrics
+        masked_metrics = {}
+        for key, val in regular_metrics.items():
+            if len(val.shape) == 3:
+                masked_val = val * self.vertices_mask
+            else:
+                masked_val = val * self.vertices_mask[:, :, 0]
 
-                # Overwritting original key, setting unmasked version
-                unmasked_metrics[f"unmasked_{key}"] = val
-                metrics[key] = torch.mean(masked_val)
+            masked_metrics[key] = masked_val
 
-        metrics.update(unmasked_metrics)
-        # Reduce metrics
-        for key, val in metrics.items():
-
-            metrics[key] = torch.mean(val)
+        ## Region metrics
+        region_metrics = {}
+        for key, ids in self.masking.masks.__dict__.items():
+            region_metrics[f"{key}_l1"] = regular_metrics['pred_distance_l1'][:, ids]
 
         ## Shape parameters based metrics
-        metrics['std_shape_code'] = pred_shape_code.std()
+        regular_metrics['std_shape_code'] = pred_shape_code.std()
 
         if self.cfg.train.max_shape_code < float("inf"):
             
             too_big = pred_shape_code.abs() > self.cfg.train.max_shape_code
-            metrics['penalty_shape_code'] = \
+            regular_metrics['penalty_shape_code'] = \
                 torch.mean(1000.0 * (pred_shape_code[too_big] - self.cfg.train.max_shape_code)**2) \
                 if too_big.any() else \
                 torch.mean(1e-7 * pred_shape_code[~too_big]**2)
         else:
-            metrics['penalty_shape_code'] = torch.tensor(0)
+            regular_metrics['penalty_shape_code'] = torch.tensor(0)
 
-        return metrics
+        ## Reduce and combine
+        combined_metrics = {
+            "regular": {key: torch.mean(val) for key, val in regular_metrics.items()},
+            "masked": {key: torch.mean(val) for key, val in masked_metrics.items()},
+            "region": {key: torch.mean(val) for key, val in region_metrics.items()},
+        }
+
+        return combined_metrics
