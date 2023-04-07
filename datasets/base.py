@@ -44,6 +44,10 @@ class BaseDataset(Dataset, ABC):
         self.min_max_K = 0
         self.cluster = False
         self.dataset_root = config.root
+        self.random_flip = config.random_flip
+        self.random_flip_prob = config.random_flip_prob
+        self.add_noise = config.add_noise
+        self.add_noise_std = config.add_noise_std
         self.total_images = 0
         self.image_folder = 'arcface_input'
         self.flame_folder = 'FLAME_parameters'
@@ -104,6 +108,22 @@ class BaseDataset(Dataset, ABC):
                 'pose_params': torch.cat(K * [torch.cat([pose[:3], pose[6:9]])[None]], dim=0),
             }
 
+            images_list = []
+            arcface_list = []
+
+            for i in sample_list:
+                image_path = images[i]
+                image = np.array(imread(image_path))
+                image = image / 255.
+                image = image.transpose(2, 0, 1)
+                arcface_image = np.load(self.get_arcface_path(image_path), allow_pickle=True)
+
+                images_list.append(torch.from_numpy(image.copy()))
+                arcface_list.append(torch.from_numpy(arcface_image.copy()))
+
+            images_array = torch.stack(images_list).float()
+            arcface_array = torch.stack(arcface_list).float()
+
         else:
             # Use files
             vertex_path = Path(self.dataset_root, self.name, self.obj_folder, actor)
@@ -116,27 +136,42 @@ class BaseDataset(Dataset, ABC):
             
             # Make sure meshes are centred!
             vertices -= vertices.mean(axis=0)
-            vertices = torch.tensor(vertices).float()
-            
-            flame = {
-                'vertices': torch.cat(K * [vertices[None]], dim=0)
-            }
 
-        images_list = []
-        arcface_list = []
+            images_list = []
+            arcface_list = []
+            vertices_list = []
 
-        for i in sample_list:
-            image_path = images[i]
-            image = np.array(imread(image_path))
-            image = image / 255.
-            image = image.transpose(2, 0, 1)
-            arcface_image = np.load(self.get_arcface_path(image_path), allow_pickle=True)
+            for i in sample_list:
+                image_path = images[i]
+                image = np.array(imread(image_path))
+                image = image / 255.
+                image = image.transpose(2, 0, 1)
+                arcface_image = np.load(self.get_arcface_path(image_path), allow_pickle=True)
+                flame_vertices = vertices.copy()
 
-            images_list.append(image)
-            arcface_list.append(torch.tensor(arcface_image))
+                ### Augmentation ###
+                if not self.isEval:
+                    
+                    if self.random_flip:
 
-        images_array = torch.from_numpy(np.array(images_list)).float()
-        arcface_array = torch.stack(arcface_list).float()
+                        if np.random.rand() < self.random_flip_prob:
+                            image = np.flip(image, axis=-1)
+                            arcface_image = np.flip(arcface_image, axis=-1)
+                            flame_vertices[:, 0] = -flame_vertices[:, 0]
+
+                    if self.add_noise:
+                        arcface_image += np.random.normal(0, self.add_noise_std, arcface_image.shape)
+                ####################
+
+                images_list.append(torch.from_numpy(image.copy()))
+                arcface_list.append(torch.from_numpy(arcface_image.copy()))
+                vertices_list.append(torch.from_numpy(flame_vertices.copy()))
+
+            images_array = torch.stack(images_list).float()
+            arcface_array = torch.stack(arcface_list).float()
+            flame_array = torch.stack(vertices_list).float()
+
+            flame = {'vertices': flame_array}
 
         return {
             'image': images_array,
