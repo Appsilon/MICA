@@ -130,6 +130,11 @@ class MICA(BaseModel):
         gt_verts = decoder_output['flame_verts_shape'].detach() * 1000.0
         pred_shape_code = decoder_output['pred_shape_code']
 
+        if self.cfg.dataset.align_faces:
+            face_ids = self.masking.masks.face
+            pred_verts -= pred_verts[:, face_ids].mean(axis=1).unsqueeze(1)
+            gt_verts -= gt_verts[:, face_ids].mean(axis=1).unsqueeze(1)
+
         ## Vertex based metrics
         # Require prediction and ground truth with same order
         regular_metrics['mica_distance'] = (pred_verts - gt_verts).abs()

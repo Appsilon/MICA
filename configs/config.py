@@ -59,6 +59,7 @@ cfg.dataset.n_train = 100000
 cfg.dataset.num_workers = 4
 cfg.dataset.root = '/mnt/disks/data/datasets'
 cfg.dataset.use_shape_params = True
+cfg.dataset.align_faces = False
 cfg.dataset.random_flip = False
 cfg.dataset.random_flip_prob = 0.5
 cfg.dataset.add_noise = False
