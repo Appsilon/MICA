@@ -160,7 +160,9 @@ class BaseDataset(Dataset, ABC):
                             flame_vertices[:, 0] = -flame_vertices[:, 0]
 
                     if self.add_noise:
-                        arcface_image += np.random.normal(0, self.add_noise_std, arcface_image.shape)
+                        noise = np.random.normal(0, self.add_noise_std, arcface_image.shape)
+                        arcface_image = np.clip(arcface_image + noise, -1., 1.)
+
                 ####################
 
                 images_list.append(torch.from_numpy(image.copy()))

@@ -37,6 +37,7 @@ class MappingNetwork(nn.Module):
         else:
             self.skips = []
 
+        # This is actually hidden + 1 layers
         self.network = nn.ModuleList(
             [nn.Linear(z_dim, map_hidden_dim)] +
             [nn.Linear(map_hidden_dim, map_hidden_dim) if i not in self.skips else
@@ -49,6 +50,9 @@ class MappingNetwork(nn.Module):
             self.output.weight *= 0.25
 
     def forward(self, z):
+
+        z = Functional.normalize(z)
+
         h = z
         for i, l in enumerate(self.network):
             h = self.network[i](h)

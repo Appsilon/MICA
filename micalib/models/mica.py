@@ -21,7 +21,6 @@ import sys
 sys.path.append("./nfclib")
 
 import torch
-import torch.nn.functional as F
 
 from models.arcface import Arcface
 from models.generator import Generator
@@ -86,7 +85,7 @@ class MICA(BaseModel):
     def encode(self, images, arcface_imgs):
         codedict = {}
 
-        codedict['arcface'] = F.normalize(self.arcface(arcface_imgs))
+        codedict['arcface'] = self.arcface(arcface_imgs)
         codedict['images'] = images
 
         return codedict

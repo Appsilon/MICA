@@ -64,6 +64,7 @@ class Trainer(object):
         self.device = device
         self.batch_size = self.cfg.dataset.batch_size
         self.K = self.cfg.dataset.K
+        self.prepare_data()
 
         # deca model
         self.nfc = nfc_model.to(self.device)
@@ -205,9 +206,9 @@ class Trainer(object):
         logger.info(f'[TRAINER] Training dataset is ready with {len(self.train_dataset)} actors and {total_images} images.')
 
     def fit(self):
-        self.prepare_data()
+
         iters_every_epoch = int(len(self.train_dataset) / self.batch_size)
-        max_epochs = int(self.cfg.train.max_steps / iters_every_epoch)
+        max_epochs = self.steps2epochs(self.cfg.train.max_steps)
         start_epoch = self.epoch
         for epoch in range(start_epoch, max_epochs):
             for step in tqdm(range(iters_every_epoch), desc=f"Epoch[{epoch + 1}/{max_epochs}]"):
@@ -310,3 +311,9 @@ class Trainer(object):
 
         self.save_checkpoint(os.path.join(self.cfg.output_dir, 'model' + '.tar'))
         logger.info(f'[TRAINER] Fitting has ended!')
+
+    def steps2epochs(self, steps):
+
+        steps_every_epoch = int(len(self.train_dataset) / self.batch_size)
+        epochs = int(steps / steps_every_epoch)
+        return epochs
