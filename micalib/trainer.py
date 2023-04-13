@@ -202,23 +202,19 @@ class Trainer(object):
             worker_init_fn=seed_worker,
             generator=generator)
 
-        self.train_iter = iter(self.train_dataloader)
         logger.info(f'[TRAINER] Training dataset is ready with {len(self.train_dataset)} actors and {total_images} images.')
 
     def fit(self):
 
-        iters_every_epoch = int(len(self.train_dataset) / self.batch_size)
         max_epochs = self.steps2epochs(self.cfg.train.max_steps)
         start_epoch = self.epoch
         for epoch in range(start_epoch, max_epochs):
-            for step in tqdm(range(iters_every_epoch), desc=f"Epoch[{epoch + 1}/{max_epochs}]"):
+
+            train_iter = iter(self.train_dataloader)
+
+            for step, batch in enumerate(tqdm(train_iter, total=len(train_iter), desc=f"Epoch[{epoch + 1}/{max_epochs}]")):
                 if self.global_step > self.cfg.train.max_steps:
                     break
-                try:
-                    batch = next(self.train_iter)
-                except Exception as e:
-                    self.train_iter = iter(self.train_dataloader)
-                    batch = next(self.train_iter)
 
                 visualizeTraining = self.global_step % self.cfg.train.vis_steps == 0
 
@@ -233,7 +229,7 @@ class Trainer(object):
                     loss_info = f"\n" \
                                 f"  Epoch: {epoch}\n" \
                                 f"  Step: {self.global_step}\n" \
-                                f"  Iter: {step}/{iters_every_epoch}\n" \
+                                f"  Iter: {step}/{len(train_iter)}\n" \
                                 f"  LR: {self.opt.param_groups[0]['lr']}\n" \
                                 f"  Time: {datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}\n"
                     
