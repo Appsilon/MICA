@@ -129,10 +129,21 @@ class MICA(BaseModel):
         gt_verts = decoder_output['flame_verts_shape'].detach() * 1000.0
         pred_shape_code = decoder_output['pred_shape_code']
 
-        if self.cfg.dataset.align_faces:
-            face_ids = self.masking.masks.face
-            pred_verts -= pred_verts[:, face_ids].mean(axis=1).unsqueeze(1)
-            gt_verts -= gt_verts[:, face_ids].mean(axis=1).unsqueeze(1)
+        feature_keys = self.masking.get_scope_ordered_mask_keys()
+        chamfer_feat_norm = torch.zeros(pred_verts.shape[:-1]).to(self.cfg.device)
+        l2_feat_norm = torch.zeros(pred_verts.shape[:-1]).to(self.cfg.device)
+
+        for feat in feature_keys:
+            feat_ids = self.masking.masks.__dict__[feat]
+
+            feature_aligned_pred_verts = pred_verts[:, feat_ids] - pred_verts[:, feat_ids].mean(axis=1).unsqueeze(1)
+            feature_aligned_gt_verts = gt_verts[:, feat_ids] - gt_verts[:, feat_ids].mean(axis=1).unsqueeze(1)
+            chamfer_feat_norm[:, feat_ids], _ = chamfer_distance(feature_aligned_pred_verts, feature_aligned_gt_verts, norm=self.cfg.train.norm)
+            
+            l2_feat_norm[:, feat_ids] = ((feature_aligned_pred_verts - feature_aligned_gt_verts) ** 2).sum(-1) ** 0.5
+
+        regular_metrics['feat_norm_chamfer_distance'] = chamfer_feat_norm
+        regular_metrics['feat_norm_distance_l2'] = l2_feat_norm
 
         ## Vertex based metrics
         # Require prediction and ground truth with same order
@@ -158,17 +169,9 @@ class MICA(BaseModel):
             region_metrics[f"{key}_l1"] = regular_metrics['pred_distance_l1'][:, ids]
 
         ## Shape parameters based metrics
-        regular_metrics['std_shape_code'] = pred_shape_code.std()
-
-        if self.cfg.train.max_shape_code < float("inf"):
-            
-            too_big = pred_shape_code.abs() > self.cfg.train.max_shape_code
-            regular_metrics['penalty_shape_code'] = \
-                torch.mean(1000.0 * (pred_shape_code[too_big] - self.cfg.train.max_shape_code)**2) \
-                if too_big.any() else \
-                torch.mean(1e-7 * pred_shape_code[~too_big]**2)
-        else:
-            regular_metrics['penalty_shape_code'] = torch.tensor(0)
+        regular_metrics['std_shape_code'] = pred_shape_code.std(-1)
+        regular_metrics['shape_code_l1'] = pred_shape_code.abs().sum(-1)
+        regular_metrics['shape_code_l2'] = (pred_shape_code ** 2).sum(-1) ** 0.5
 
         ## Reduce and combine
         combined_metrics = {

@@ -203,6 +203,25 @@ class Masking(nn.Module):
 
         return mask
 
+    def get_scope_ordered_mask_keys(self):
+
+        return (
+            "face", 
+            "neck", 
+            "scalp", 
+            "boundary",
+            "forehead", 
+            "nose", 
+            "lips", 
+            "eye_region", 
+            "left_ear",
+            "right_ear",
+            "left_eye_region", 
+            "right_eye_region", 
+            "left_eyeball",
+            "right_eyeball",
+        )
+
     def get_masked_mesh(self, vertices, triangle_mask):
         if len(vertices.shape) == 2:
             vertices = vertices[None]
