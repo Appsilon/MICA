@@ -20,7 +20,6 @@ train:
   lr: 1e-5
   arcface_lr: 1e-5
   weight_decay: 2e-4
-  max_shape_code: 3.5                       # Maximum allowed absolute shape paramater
   norm: 2                                   # Norm value for distance calculations
   fresh: True                               # Whether to train a fresh model (overwrite existing)
   reset_optimizer: False
@@ -41,6 +40,9 @@ model:
   mapping_layers: 3
   hidden_layers_size: 300
   n_shape: 300
+  batch_norm: False
+  selu: True
+  max_shape_code: 3.5
   name: 'mica'
 
 mask_weights:

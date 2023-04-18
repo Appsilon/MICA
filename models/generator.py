@@ -18,50 +18,70 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as Functional
+from typing import Union
 
 from models.flame import FLAME
 
 
 def kaiming_leaky_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Linear') != -1:
+    if isinstance(m, nn.Linear):
         torch.nn.init.kaiming_normal_(m.weight, a=0.2, mode='fan_in', nonlinearity='leaky_relu')
+        torch.nn.init.constant_(m.bias, 0.0)
+
+
+def kaiming_selu_init(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.kaiming_normal_(m.weight, nonlinearity='selu')
+        torch.nn.init.constant_(m.bias, 0.0)
 
 
 class MappingNetwork(nn.Module):
-    def __init__(self, z_dim, map_hidden_dim, map_output_dim, hidden=2):
+    def __init__(self, model_cfg, input_dim: int, hidden_dim: Union[int, list[int]], output_dim: int, hidden_layers: int = 2):
         super().__init__()
+        
+        self.cfg = model_cfg
 
-        if hidden > 5:
-            self.skips = [int(hidden / 2)]
+        if isinstance(hidden_dim, int):
+            hidden_dim = [hidden_dim for _ in range(hidden_layers)]       
+
+        layers = [nn.BatchNorm1d(input_dim)] if self.cfg.batch_norm else []
+        prev_dim = input_dim
+        for dim in hidden_dim:
+            
+            layers.append(nn.Linear(prev_dim, dim))
+            
+            if self.cfg.batch_norm:
+                layers.append(nn.BatchNorm1d(dim))
+
+            layers.append(nn.SELU() if self.cfg.selu else nn.LeakyReLU(negative_slope=0.2))
+            prev_dim = dim
+        
+        self.network = nn.Sequential(*layers)
+        self.output = nn.Linear(hidden_dim[-1], output_dim)
+        
+        if self.cfg.selu:
+            self.network.apply(kaiming_selu_init)
+            self.output.apply(kaiming_selu_init)
         else:
-            self.skips = []
+            self.network.apply(kaiming_leaky_init)
+            self.output.apply(kaiming_leaky_init)
 
-        # This is actually hidden + 1 layers
-        self.network = nn.ModuleList(
-            [nn.Linear(z_dim, map_hidden_dim)] +
-            [nn.Linear(map_hidden_dim, map_hidden_dim) if i not in self.skips else
-             nn.Linear(map_hidden_dim + z_dim, map_hidden_dim) for i in range(hidden)]
-        )
+        # with torch.no_grad():
+        #     self.output.weight *= 0.25
 
-        self.output = nn.Linear(map_hidden_dim, map_output_dim)
-        self.network.apply(kaiming_leaky_init)
-        with torch.no_grad():
-            self.output.weight *= 0.25
+    def forward(self, x):
+        
+        if not self.cfg.batch_norm:
+            x = Functional.normalize(x)
 
-    def forward(self, z):
+        x = self.network(x)
+        x = self.output(x)
 
-        z = Functional.normalize(z)
-
-        h = z
-        for i, l in enumerate(self.network):
-            h = self.network[i](h)
-            h = Functional.leaky_relu(h, negative_slope=0.2)
-            if i in self.skips:
-                h = torch.cat([z, h], 1)
-
-        output = self.output(h)
-        return output
+        # TODO: Should this be here or elsewhere?
+        if 0 < self.cfg.max_shape_code < float("inf"):
+            x = torch.clip(x, min=-self.cfg.max_shape_code, max=self.cfg.max_shape_code)
+        
+        return x
 
 
 class Generator(nn.Module):
@@ -72,7 +92,7 @@ class Generator(nn.Module):
         self.regress = regress
 
         if self.regress:
-            self.regressor = MappingNetwork(z_dim, map_hidden_dim, map_output_dim, hidden).to(self.device)
+            self.regressor = MappingNetwork(model_cfg, z_dim, map_hidden_dim, map_output_dim, hidden).to(self.device)
         self.generator = FLAME(model_cfg).to(self.device)
 
     def forward(self, arcface):
