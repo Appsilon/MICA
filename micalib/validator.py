@@ -115,15 +115,18 @@ class Validator(object):
 
                 total_loss = 0.
                 losses = {}
-                for key in self.cfg.train.loss_keys:
-                    
+                for loss_cfg in self.cfg.train.losses:
+            
+                    key = loss_cfg["name"]
+                    weight = loss_cfg["weight"]
+
                     if key in metrics["masked"]:
                         loss = metrics["masked"][key]
                     else:
                         loss = metrics["regular"][key]
                 
-                    losses[key] = loss
-                    total_loss += loss
+                    losses[key] = loss * weight
+                    total_loss += losses[key]
 
                 losses["total"] = total_loss
 

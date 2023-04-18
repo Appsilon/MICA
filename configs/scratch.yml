@@ -31,7 +31,9 @@ train:
   val_save_img: 1000
   checkpoint_steps: 1000                    # Overwrite model.tar
   checkpoint_epochs_steps: 10000            # Save a new tar file (model_10000.tar etc.)
-  loss_keys: ['pred_chamfer_distance', 'penalty_shape_code'] # Metrics to use as loss
+  losses: 
+    - name: 'pred_chamfer_distance' # Metrics to use as loss
+      weight: 1.
 
 model:
   arcface_unfreeze: 0                       # Number Arcface layers to unfreeze
