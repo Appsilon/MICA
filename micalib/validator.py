@@ -184,33 +184,35 @@ class Validator(object):
                 self.embeddings_lyhm = {}
 
             # Render predicted meshes
-            if self.trainer.global_step % self.cfg.train.val_save_img != 0:
-                return
+            if self.trainer.global_step % self.cfg.train.val_save_img == 0:
 
-            pred_canonical_shape_vertices = torch.empty(0, 3, 512, 512).cuda()
-            flame_verts_shape = torch.empty(0, 3, 512, 512).cuda()
-            input_images = torch.empty(0, 3, 224, 224).cuda()
+                pred_canonical_shape_vertices = torch.empty(0, 3, 512, 512).cuda()
+                flame_verts_shape = torch.empty(0, 3, 512, 512).cuda()
+                input_images = torch.empty(0, 3, 224, 224).cuda()
 
-            for i in np.random.choice(range(0, len(optdicts)), size=4, replace=False):
-                opdict, images = optdicts[i][:2]
-                n = np.random.randint(0, len(images) - 1)
-                rendering = self.nfc.render.render_mesh(opdict['pred_canonical_shape_vertices'][n:n + 1, ...])
-                pred_canonical_shape_vertices = torch.cat([pred_canonical_shape_vertices, rendering])
-                rendering = self.nfc.render.render_mesh(opdict['flame_verts_shape'][n:n + 1, ...])
-                flame_verts_shape = torch.cat([flame_verts_shape, rendering])
-                input_images = torch.cat([input_images, images[n:n + 1, ...]])
+                for i in np.random.choice(range(0, len(optdicts)), size=4, replace=False):
+                    opdict, images = optdicts[i][:2]
+                    n = np.random.randint(0, len(images) - 1)
+                    rendering = self.nfc.render.render_mesh(opdict['pred_canonical_shape_vertices'][n:n + 1, ...])
+                    pred_canonical_shape_vertices = torch.cat([pred_canonical_shape_vertices, rendering])
+                    rendering = self.nfc.render.render_mesh(opdict['flame_verts_shape'][n:n + 1, ...])
+                    flame_verts_shape = torch.cat([flame_verts_shape, rendering])
+                    input_images = torch.cat([input_images, images[n:n + 1, ...]])
 
-            visdict = {
-                "pred_canonical_shape_vertices": pred_canonical_shape_vertices,
-                "flame_verts_shape": flame_verts_shape,
-                "input": input_images
-            }
+                visdict = {
+                    "pred_canonical_shape_vertices": pred_canonical_shape_vertices,
+                    "flame_verts_shape": flame_verts_shape,
+                    "input": input_images
+                }
 
-            grid_image = util.visualize_grid(visdict, size=512)
-            self.trainer.writer.add_image("valid_images/comparison", grid_image[:, :, ::-1], self.trainer.global_step, dataformats="HWC")
+                grid_image = util.visualize_grid(visdict, size=512)
+                self.trainer.writer.add_image("valid_images/comparison", grid_image[:, :, ::-1], self.trainer.global_step, dataformats="HWC")
 
-            savepath = os.path.join(self.cfg.output_dir, self.cfg.train.val_vis_dir, f'{self.trainer.global_step:08}.jpg')
-            cv2.imwrite(savepath, grid_image)
+                savepath = os.path.join(self.cfg.output_dir, self.cfg.train.val_vis_dir, f'{self.trainer.global_step:08}.jpg')
+                cv2.imwrite(savepath, grid_image)
+
+            return average
+
     def now(self):
         logger.info(f'[Validator] NoW testing has begun...')
         # self.tester.test_now('', 'training', self.nfc.model_dict())

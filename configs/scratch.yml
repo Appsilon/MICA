@@ -20,7 +20,8 @@ train:
   arcface_lr: 1e-5
   weight_decay: 2e-4
   norm: 2                                   # Norm value for distance calculations
-  fresh: True                               # Whether to train a fresh model (overwrite existing)
+  scheduler: 'StepLR'                       # Implemented "StepLR", "MultiStepLR", "OneCycleLR", "ReduceLROnPlateau" schedulers
+  replace_scheduler: False
   reset_optimizer: False
   max_steps: 30000
   log_steps: 50

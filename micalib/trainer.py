@@ -97,7 +97,28 @@ class Trainer(object):
             params=self.nfc.parameters_to_optimize(),
             amsgrad=False)
 
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=1, gamma=0.1)
+        if self.cfg.train.scheduler:
+            # TODO: Hardcoded scheduler parameters
+            if self.cfg.train.scheduler == "StepLR":
+                step_size = self.steps2epochs(self.cfg.train.max_steps // 3)
+                # step_size = self.steps2epochs(20500)
+                self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=step_size, gamma=0.5)
+            
+            elif self.cfg.train.scheduler == "MultiStepLR":
+                milestones = [self.steps2epochs(self.cfg.train.max_steps * n) for n in (0.5, 0.75, 0.875)]
+                self.scheduler = torch.optim.lr_scheduler.MultiStepLR(self.opt, milestones=milestones, gamma=0.5)
+
+            elif self.cfg.train.scheduler == "OneCycleLR":
+                self.scheduler = torch.optim.lr_scheduler.OneCycleLR(self.opt, max_lr=self.cfg.train.lr * 10, total_steps=self.cfg.train.max_steps)
+            
+            elif self.cfg.train.scheduler == "ReduceLROnPlateau":
+                # Have to be careful with patience, since validation not run every epoch
+                self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt, mode='min', patience=10, factor=0.5)
+            else:
+                raise NotImplementedError(f"No learning rate scheduler implemented for input: {self.cfg.train.scheduler}")
+        else:
+            # TODO: Dummy scheduler to appease legacy code
+            self.scheduler = torch.optim.lr_scheduler.StepLR(self.opt, step_size=self.cfg.train.max_steps, gamma=0.1)
 
     def load_checkpoint(self):
         dist.barrier()
@@ -111,12 +132,17 @@ class Trainer(object):
             checkpoint = torch.load(model_path, map_location)
             if 'opt' in checkpoint:
                 self.opt.load_state_dict(checkpoint['opt'])
-            if 'scheduler' in checkpoint:
-                self.scheduler.load_state_dict(checkpoint['scheduler'])
             if 'epoch' in checkpoint:
                 self.epoch = checkpoint['epoch']
             if 'global_step' in checkpoint:
                 self.global_step = checkpoint['global_step']
+
+            if self.cfg.train.replace_scheduler:
+                self.scheduler.optimizer = self.opt
+                self.scheduler.last_epoch = self.epoch
+            elif 'scheduler' in checkpoint:
+                self.scheduler.load_state_dict(checkpoint['scheduler'])
+
             logger.info(f"[TRAINER] Resume training from {model_path}")
             logger.info(f"[TRAINER] Start from step {self.global_step}")
             logger.info(f"[TRAINER] Start from epoch {self.epoch}")
@@ -187,7 +213,7 @@ class Trainer(object):
         return losses, metrics, opdict
 
     def validation_step(self):
-        self.validator.run()
+        return self.validator.run()
 
     def evaluation_step(self):
         pass
@@ -227,6 +253,10 @@ class Trainer(object):
 
                 losses["total"].backward()
                 self.opt.step()
+
+                if self.cfg.train.scheduler == "OneCycleLR":
+                    self.scheduler.step()
+
                 self.global_step += 1
 
                 if self.global_step % self.cfg.train.log_steps == 0 and self.device == 0:
@@ -237,6 +267,9 @@ class Trainer(object):
                                 f"  LR: {self.opt.param_groups[0]['lr']}\n" \
                                 f"  Time: {datetime.now().strftime('%Y-%m-%d-%H:%M:%S')}\n"
                     
+                    # TODO: Should not be under loss, rename this and below
+                    self.writer.add_scalar('train_metrics_loss/lr', self.opt.param_groups[0]['lr'], global_step=self.global_step)
+
                     for k, v in losses.items():
                         
                         loss_info = loss_info + f'  loss_{k}: {v:.4f}\n'
@@ -293,10 +326,10 @@ class Trainer(object):
                     cv2.imwrite(savepath, grid_image)
 
                 if self.global_step % self.cfg.train.val_steps == 0:
-                    self.validation_step()
-
-                if self.global_step % self.cfg.train.lr_update_step == 0:
-                    self.scheduler.step()
+                    val_loss = self.validation_step()
+                    
+                    if self.cfg.train.scheduler == "ReduceLROnPlateau":
+                        self.scheduler.step(val_loss)
 
                 if self.global_step % self.cfg.train.eval_steps == 0:
                     self.evaluation_step()
@@ -306,6 +339,9 @@ class Trainer(object):
 
                 if self.global_step % self.cfg.train.checkpoint_epochs_steps == 0:
                     self.save_checkpoint(os.path.join(self.cfg.output_dir, 'model_' + str(self.global_step) + '.tar'))
+
+            if "step" in self.cfg.train.scheduler.lower():
+                self.scheduler.step()
 
             self.epoch += 1
 
