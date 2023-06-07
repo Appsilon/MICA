@@ -21,7 +21,7 @@ from yacs.config import CfgNode as CN
 
 cfg = CN()
 
-cfg.mica_dir = str(Path(__file__).parent.parent)
+cfg.mica_dir = str(Path(__file__).parents[1])
 cfg.device = 'cuda'
 cfg.device_id = '0'
 cfg.use_pretrained = True

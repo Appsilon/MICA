@@ -68,4 +68,7 @@ testing/stirling/logs
 testing/stirling/jobs
 
 demo/arcface
+demo/input
 demo/output
+arcface/
+scripts/

@@ -4,15 +4,15 @@ use_pretrained: False
 
 dataset:
   root: '/mnt/disks/data/datasets'
-  training_data: [ 'VHTRAIN', 'MHTRAIN' ]   # Names of dataset and numpy image path file
-  eval_data: [ 'VHVALID', 'MHVALID' ]
+  training_data: [ 'VHTRAIN_FRONT', 'MHTRAIN_FRONT' ]   # Names of dataset and numpy image path file
+  eval_data: [ 'VHVALID_FRONT', 'MHVALID_FRONT' ]
   num_workers: 4
   batch_size: 8
   K: 4                                      # Number of images used per subject
   use_shape_params: False
   random_flip: False
   random_flip_prob: 0.5
-  add_noise: False
+  add_noise: True
   add_noise_std: 0.1
 
 train:
@@ -20,11 +20,12 @@ train:
   arcface_lr: 1e-5
   weight_decay: 2e-4
   norm: 2                                   # Norm value for distance calculations
+  fresh: False                               # Whether to train a fresh model (overwrite existing)
   scheduler: 'StepLR'                       # Implemented "StepLR", "MultiStepLR", "OneCycleLR", "ReduceLROnPlateau" schedulers
   replace_scheduler: False
   reset_optimizer: False
   max_steps: 30000
-  log_steps: 50
+  log_steps: 200
   val_steps: 200
   vis_steps: 1000
   val_save_img: 1000
@@ -35,10 +36,10 @@ train:
       weight: 1.
 
 model:
-  arcface_unfreeze: 0                       # Number Arcface layers to unfreeze
+  arcface_unfreeze: 5                       # Number Arcface layers to unfreeze
   arcface_use_pretrained: True
-  mapping_layers: 3
-  hidden_layers_size: 300
+  mapping_layers: 2
+  hidden_layers_size: 512
   n_shape: 300
   batch_norm: False
   selu: True
@@ -47,5 +48,9 @@ model:
 
 mask_weights:
   face: 150.
+  eye_region: 200.
+  lips: 200.
+  nose: 200.
+  neck: 10.
   ears: 1.
   eyes: 1e-6

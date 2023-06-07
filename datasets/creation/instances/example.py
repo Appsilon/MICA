@@ -14,7 +14,7 @@ class Example(Instance, ABC):
 
     def preprocess(self):
         
-        paths_file = (Path(__file__).parent.parent.parent / "image_paths" / self.__class__.__name__.upper()).with_suffix(".npy")
+        paths_file = (Path(__file__).parents[2] / "image_paths" / self.__class__.__name__.upper()).with_suffix(".npy")
 
         if not paths_file.exists():
             images = self.get_images()
